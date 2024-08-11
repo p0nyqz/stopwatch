@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop, DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { PlusCircle, Trash2 } from 'lucide-react';
@@ -9,8 +9,8 @@ const loadSound = (src) => {
   return sound;
 };
 
-const bellTickSound = loadSound('../../public/bell-ticktock.wav');
-const happyBellSound = loadSound('../../public/happy-bells-notification.wav');
+const bellTickSound = loadSound('../public/bell-ticktock.wav');
+const happyBellSound = loadSound('../public/happy-bells-notification.wav');
 
 const parseTimers = (input: string): number[] => {
   const timers = input.split(',').map(timer => {
@@ -113,6 +113,8 @@ export const Stopwatch: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [changePoseTimeLeft, setChangePoseTimeLeft] = useState<number | null>(null);
+  const oneMinuteWarningRef = useRef(false); // Для предотвращения повторного предупреждения
+  const nextPoseAnnouncementRef = useRef(false); // Для предотвращения повторного объявления следующей позы
 
   useEffect(() => {
     if (currentTimerIndex !== null && currentTimerIndex < timers.length) {
@@ -121,12 +123,18 @@ export const Stopwatch: React.FC = () => {
       const currentTimer = timers[currentTimerIndex];
       setTimeLeft(currentTimer * 60);
 
-      speak(`Следующая поза ${currentTimer} минут.`);
+      // Объявляем следующую позу только один раз
+      if (!nextPoseAnnouncementRef.current) {
+        speak(`Следующая поза ${currentTimer} минут.`);
+        nextPoseAnnouncementRef.current = true;
+      }
 
       const interval = setInterval(() => {
         setTimeLeft(prev => {
-          if (prev === 60) {
+          if (prev === 60 && !oneMinuteWarningRef.current && currentTimer > 1) {
+            // Если таймер не равен одной минуте, произносим предупреждение
             speak('Осталась одна минута.');
+            oneMinuteWarningRef.current = true; // Установим флаг, чтобы предупредить только один раз
           }
           if (prev <= 1) {
             clearInterval(interval);
@@ -161,11 +169,17 @@ export const Stopwatch: React.FC = () => {
             bellTickSound.currentTime = 0; // Перемотка на начало
             happyBellSound.currentTime = 0;  // Перемотка на начало
             happyBellSound.play();
-            setCurrentTimerIndex((prevIndex) => (prevIndex !== null ? prevIndex + 1 : null));
-            setChangePoseTimeLeft(null);
+            happyBellSound.onended = () => { // Ждем завершения звука перед объявлением следующей позы
+              if (currentTimerIndex !== null && currentTimerIndex + 1 < timers.length) {
+                nextPoseAnnouncementRef.current = false; // Сбросим флаг для следующего таймера
+                oneMinuteWarningRef.current = false; // Сбросим предупреждение за минуту
+                speak(`Следующая поза ${timers[currentTimerIndex + 1]} минут.`);
+              }
+              setCurrentTimerIndex((prevIndex) => (prevIndex !== null ? prevIndex + 1 : null));
+              setChangePoseTimeLeft(null);
+            };
             return null;
           }
-
           return prev - 1;
         }
         return prev;
@@ -222,12 +236,18 @@ export const Stopwatch: React.FC = () => {
           type="text" 
           value={input} 
           onChange={handleInputChange} 
-          placeholder="повторы x время, 5x3, 3x7, 1x10"
+          placeholder="5x3, 3x7, 1x10"
           className="p-4 h-12"
           style={{ width: '340px', borderRadius: '66px', borderColor: '#DADCE0' }}
         />
         <button onClick={handleStartTimers}>Создать таймеры</button>
         
+        {totalTime > 0 && (
+          <div style={{ marginTop: '10px' }}>
+            <h4>Общее время: {formatTime(totalTime)}</h4>
+          </div>
+        )}
+
         <div style={{ marginTop: '20px' }}>
           {timers.map((timer, index) => (
             <TimerItem 
@@ -241,16 +261,6 @@ export const Stopwatch: React.FC = () => {
             />
           ))}
         </div>
-
-        {totalTime > 0 && (
-          <div style={{ marginTop: '20px', fontSize: '18px' }}>
-            Суммарное время: {formatTime(totalTime)}
-          </div>
-        )}
-
-        {timers.length > 0 && currentTimerIndex === null && (
-          <button onClick={handleStartTimers}>Запустить таймеры</button>
-        )}
 
         {currentTimerIndex !== null && (
           <button onClick={handlePause} style={{ marginTop: '10px' }}>
