@@ -1,5 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useDrag, useDrop, DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
 import { PlusCircle, Trash2 } from 'lucide-react';
+
+const loadSound = (src) => {
+  const sound = new Audio(src);
+  sound.load();
+  return sound;
+};
+
+const bellTickSound = loadSound('../../public/bell-ticktock.wav');
+const happyBellSound = loadSound('../../public/happy-bells-notification.wav');
 
 const parseTimers = (input: string): number[] => {
   const timers = input.split(',').map(timer => {
@@ -9,27 +20,107 @@ const parseTimers = (input: string): number[] => {
   return timers;
 };
 
-const speak = (text: string, lang: string = 'ru-RU') => {
+const formatTime = (minutes: number): string => {
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  return `${hours > 0 ? `${hours}h ` : ''}${remainingMinutes}m`;
+};
+
+const speak = (text: string, lang: string = 'ru-RU', voiceName: string = 'Google русский') => {
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang; // Устанавливаем русский язык
+  utterance.lang = lang;
+
+  const voices = speechSynthesis.getVoices();
+  const selectedVoice = voices.find(voice => voice.name === voiceName);
+
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
+  }
+
   speechSynthesis.speak(utterance);
+};
+
+const TimerItem = ({ timer, index, moveTimer, onDelete, currentTimerIndex, timeLeft }) => {
+  const ref = React.useRef(null);
+
+  const [, drop] = useDrop({
+    accept: 'timer',
+    hover(item: { index: number }) {
+      if (item.index !== index) {
+        moveTimer(item.index, index);
+        item.index = index;
+      }
+    },
+  });
+
+  const [{ isDragging }, drag] = useDrag({
+    type: 'timer',
+    item: { index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  drag(drop(ref));
+
+  return (
+    <div 
+      ref={ref}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: '10px',
+        opacity: isDragging ? 0.5 : 1,
+      }}
+    >
+      <div 
+        style={{
+          width: '200px',
+          height: '30px',
+          background: currentTimerIndex === index ? 'lightgreen' : 'lightgray',
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '5px',
+          marginRight: '10px',
+        }}
+      >
+        {currentTimerIndex === index && (
+          <div 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              height: '100%',
+              width: `${((timer * 60 - timeLeft) / (timer * 60)) * 100}%`,
+              background: 'green',
+              transition: 'width 1s linear'
+            }}
+          />
+        )}
+      </div>
+      <span style={{ marginLeft: '10px' }}>{timer} мин</span>
+      <button onClick={() => onDelete(index)} style={{ marginLeft: '10px' }}>Удалить</button>
+    </div>
+  );
 };
 
 export const Stopwatch: React.FC = () => {
   const [input, setInput] = useState('');
-  const [timers, setTimers] = useState<number[]>([]); // Список таймеров
-  const [currentTimerIndex, setCurrentTimerIndex] = useState<number | null>(null); // Индекс текущего активного таймера
+  const [timers, setTimers] = useState<number[]>([]);
+  const [totalTime, setTotalTime] = useState(0);
+  const [currentTimerIndex, setCurrentTimerIndex] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [isPaused, setIsPaused] = useState(false); // Для управления паузой
+  const [isPaused, setIsPaused] = useState(false);
+  const [changePoseTimeLeft, setChangePoseTimeLeft] = useState<number | null>(null);
 
   useEffect(() => {
     if (currentTimerIndex !== null && currentTimerIndex < timers.length) {
       if (isPaused) return;
 
       const currentTimer = timers[currentTimerIndex];
-      setTimeLeft(currentTimer * 60); // Convert minutes to seconds
+      setTimeLeft(currentTimer * 60);
 
-      // Объявляем начало отсчета времени
       speak(`Следующая поза ${currentTimer} минут.`);
 
       const interval = setInterval(() => {
@@ -39,7 +130,7 @@ export const Stopwatch: React.FC = () => {
           }
           if (prev <= 1) {
             clearInterval(interval);
-            setCurrentTimerIndex((prevIndex) => (prevIndex !== null ? prevIndex + 1 : null));
+            handleEndOfTimer();
             return 0;
           }
           return prev - 1;
@@ -50,100 +141,139 @@ export const Stopwatch: React.FC = () => {
     }
   }, [currentTimerIndex, timers, isPaused]);
 
-  const handleCreateTimers = () => {
-    const parsedTimers = parseTimers(input);
-    setTimers(parsedTimers); // Создаем таймеры, но не запускаем их
+  const handleEndOfTimer = () => {
+    speak('Смена позы.');
+    setTimeout(() => {
+      startChangePoseCountdown();
+    }, 1000); // Небольшая задержка перед началом отсчета на смену позы
+  };
+
+  const startChangePoseCountdown = () => {
+    setChangePoseTimeLeft(20);
+    bellTickSound.play(); // Запуск звука один раз
+
+    const changePoseInterval = setInterval(() => {
+      setChangePoseTimeLeft((prev) => {
+        if (prev !== null) {
+          if (prev <= 1) {
+            clearInterval(changePoseInterval);
+            bellTickSound.pause(); // Остановка звука после 20 секунд
+            bellTickSound.currentTime = 0; // Перемотка на начало
+            happyBellSound.currentTime = 0;  // Перемотка на начало
+            happyBellSound.play();
+            setCurrentTimerIndex((prevIndex) => (prevIndex !== null ? prevIndex + 1 : null));
+            setChangePoseTimeLeft(null);
+            return null;
+          }
+
+          return prev - 1;
+        }
+        return prev;
+      });
+    }, 1000);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInput(value);
+
+    const parsedTimers = parseTimers(value);
+    setTimers(parsedTimers);
+
+    const totalMinutes = parsedTimers.reduce((acc, timer) => acc + timer, 0);
+    setTotalTime(totalMinutes);
   };
 
   const handleStartTimers = () => {
     if (timers.length > 0) {
-      setCurrentTimerIndex(0); // Запускаем с первого таймера
-      setIsPaused(false); // Снимаем с паузы при старте
+      setCurrentTimerIndex(0);
+      setIsPaused(false);
     }
   };
 
   const handlePause = () => {
-    setIsPaused(prev => !prev); // Переключение паузы
+    setIsPaused(prev => !prev);
   };
 
   const handleDeleteTimer = (indexToDelete: number) => {
-    setTimers(prevTimers => prevTimers.filter((_, index) => index !== indexToDelete));
+    setTimers(prevTimers => {
+      const updatedTimers = prevTimers.filter((_, index) => index !== indexToDelete);
+      const totalMinutes = updatedTimers.reduce((acc, timer) => acc + timer, 0);
+      setTotalTime(totalMinutes);
+      return updatedTimers;
+    });
+
     if (currentTimerIndex !== null && indexToDelete < currentTimerIndex) {
-      setCurrentTimerIndex(prev => (prev !== null ? prev - 1 : null)); // Корректируем индекс текущего таймера
+      setCurrentTimerIndex(prev => (prev !== null ? prev - 1 : null));
     }
   };
 
+  const moveTimer = (fromIndex: number, toIndex: number) => {
+    const updatedTimers = [...timers];
+    const [movedTimer] = updatedTimers.splice(fromIndex, 1);
+    updatedTimers.splice(toIndex, 0, movedTimer);
+    setTimers(updatedTimers);
+  };
+
   return (
-    <div>
-      <div className="max-w-sm mx-auto p-4 bg-white rounded shadow-lg">
-      <h1 className="text-xl font-semibold mb-4">Task List</h1>
-      <ul className="space-y-2">
-        <li className="flex items-center justify-between p-2 bg-gray-100 rounded">
-          <span>Task 1</span>
-          <Trash2 className="w-5 h-5 text-red-500 cursor-pointer" />
-        </li>
-        <li className="flex items-center justify-between p-2 bg-gray-100 rounded">
-          <span>Task 2</span>
-          <Trash2 className="w-5 h-5 text-red-500 cursor-pointer" />
-        </li>
-      </ul>
-      <button className="mt-4 flex items-left space-x-2 text-white bg-blue-500 px-3 py-2 rounded">
-        <PlusCircle className="w-5 h-5" />
-        <span>Add Task</span>
-      </button>
-    </div>
-      <input 
-        type="text" 
-        value={input} 
-        onChange={(e) => setInput(e.target.value)} 
-        placeholder="5x3, 3x7, 1x10"
-        style={{ height: '42px', width: '340px', borderRadius: '66px', borderColor: '#DADCE0'}}
-      />
-      <button onClick={handleCreateTimers}>Создать таймеры</button>
-      
-      <div style={{ marginTop: '20px' }}>
-        {timers.map((timer, index) => (
-          <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+    <DndProvider backend={HTML5Backend}>
+      <div>
+        <input 
+          type="text" 
+          value={input} 
+          onChange={handleInputChange} 
+          placeholder="повторы x время, 5x3, 3x7, 1x10"
+          className="p-4 h-12"
+          style={{ width: '340px', borderRadius: '66px', borderColor: '#DADCE0' }}
+        />
+        <button onClick={handleStartTimers}>Создать таймеры</button>
+        
+        <div style={{ marginTop: '20px' }}>
+          {timers.map((timer, index) => (
+            <TimerItem 
+              key={index}
+              index={index}
+              timer={timer}
+              moveTimer={moveTimer}
+              onDelete={handleDeleteTimer}
+              currentTimerIndex={currentTimerIndex}
+              timeLeft={timeLeft}
+            />
+          ))}
+        </div>
+
+        {totalTime > 0 && (
+          <div style={{ marginTop: '20px', fontSize: '18px' }}>
+            Суммарное время: {formatTime(totalTime)}
+          </div>
+        )}
+
+        {timers.length > 0 && currentTimerIndex === null && (
+          <button onClick={handleStartTimers}>Запустить таймеры</button>
+        )}
+
+        {currentTimerIndex !== null && (
+          <button onClick={handlePause} style={{ marginTop: '10px' }}>
+            {isPaused ? 'Продолжить' : 'Пауза'}
+          </button>
+        )}
+
+        {changePoseTimeLeft !== null && (
+          <div style={{ marginTop: '20px', width: '100%', height: '30px', backgroundColor: 'lightgray', borderRadius: '5px', overflow: 'hidden', position: 'relative' }}>
             <div 
               style={{
-                width: '200px',
-                height: '30px',
-                background: currentTimerIndex === index ? 'lightgreen' : 'lightgray',
-                position: 'relative',
-                overflow: 'hidden',
-                borderRadius: '5px',
-                marginRight: '10px',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                height: '100%',
+                width: `${(20 - changePoseTimeLeft) / 20 * 100}%`,
+                backgroundColor: 'orange',
+                transition: 'width 1s linear'
               }}
-            >
-              {currentTimerIndex === index && (
-                <div 
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    height: '100%',
-                    width: `${((timers[index] * 60 - timeLeft) / (timer * 60)) * 100}%`,
-                    background: 'green',
-                    transition: 'width 1s linear'
-                  }}
-                />
-              )}
-            </div>
-            <span style={{ marginLeft: '10px' }}>{timer} мин</span>
-            <button onClick={() => handleDeleteTimer(index)} style={{ marginLeft: '10px' }}>Удалить</button>
+            />
           </div>
-        ))}
+        )}
       </div>
-
-      {timers.length > 0 && currentTimerIndex === null && (
-        <button onClick={handleStartTimers}>Запустить таймеры</button>
-      )}
-
-      {currentTimerIndex !== null && (
-        <button onClick={handlePause} style={{ marginTop: '10px' }}>
-          {isPaused ? 'Продолжить' : 'Пауза'}
-        </button>
-      )}
-    </div>
+    </DndProvider>
   );
 };
