@@ -3,15 +3,15 @@ import reactLogo from './assets/react.svg'
 import './index.css';
 import './App.css'
 import { Stopwatch }  from './components/Stopwatch'
-import { SWatch } from './components/SWatch';
+// import { SWatch } from './components/SWatch';
 
 function App() {
   const [count, setCount] = useState(0)
 
   return (
     <>
-    <SWatch />
-      {/* <Stopwatch /> */}
+    {/* <SWatch /> */}
+      <Stopwatch />
       <div>
         <a href="https://react.dev" target="_blank">
           <img src={reactLogo} className="logo react" alt="React logo" />

@@ -9,8 +9,8 @@ const loadSound = (src) => {
   return sound;
 };
 
-const bellTickSound = loadSound('../public/bell-ticktock.wav');
-const happyBellSound = loadSound('../public/happy-bells-notification.wav');
+const bellTickSound = loadSound('/bell-ticktock.wav');
+const happyBellSound = loadSound('/happy-bells-notification.wav');
 
 const parseTimers = (input: string): number[] => {
   const timers = input.split(',').map(timer => {
@@ -19,6 +19,9 @@ const parseTimers = (input: string): number[] => {
   }).flat();
   return timers;
 };
+
+const timerPresets = [['3x3', '5x5', '7x3'], ['5x7', '7x2']];
+// desc: ['3x3', '5x5', '7x3'];
 
 const formatTime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
@@ -157,7 +160,7 @@ export const Stopwatch: React.FC = () => {
   };
 
   const startChangePoseCountdown = () => {
-    setChangePoseTimeLeft(20);
+    setChangePoseTimeLeft(40);
     bellTickSound.play(); // Запуск звука один раз
 
     const changePoseInterval = setInterval(() => {
@@ -248,6 +251,19 @@ export const Stopwatch: React.FC = () => {
           </div>
         )}
 
+        {/* <p>{timerPresets}</p> */}
+        {timerPresets.map(paragraph => <div>{paragraph.join(', ')}</div>)}
+        {/* <div>{timerPresets.join(',')}</div> */}
+        {/* <p>{timerPresets.map((item, index) => ({(index? ', ': '') + item }))}</p> */}
+
+        {/* <div>
+        {
+          this.props.data.map(function(item, index) {
+            return <span key={`timerPresets${index}`}>{ (index ? ', ' : '') + item }</span>;
+          })
+        }
+      </div> */}
+
         <div style={{ marginTop: '20px' }}>
           {timers.map((timer, index) => (
             <TimerItem 
@@ -276,7 +292,7 @@ export const Stopwatch: React.FC = () => {
                 top: 0,
                 left: 0,
                 height: '100%',
-                width: `${(20 - changePoseTimeLeft) / 20 * 100}%`,
+                width: `${(40 - changePoseTimeLeft) / 40 * 100}%`,
                 backgroundColor: 'orange',
                 transition: 'width 1s linear'
               }}
@@ -284,6 +300,23 @@ export const Stopwatch: React.FC = () => {
           </div>
         )}
       </div>
+      {/* <div className="max-w-sm mx-auto p-4 bg-white rounded shadow-lg">
+      <h1 className="text-xl font-semibold mb-4">Task List</h1>
+      <ul className="space-y-2">
+        <li className="flex items-center justify-between p-2 bg-gray-100 rounded">
+          <span>Task 1</span>
+          <Trash2 className="w-5 h-5 text-red-500 cursor-pointer" />
+        </li>
+        <li className="flex items-center justify-between p-2 bg-gray-100 rounded">
+          <span>Task 2</span>
+          <Trash2 className="w-5 h-5 text-red-500 cursor-pointer" />
+        </li>
+      </ul>
+      <button className="mt-4 flex items-center space-x-2 text-white bg-blue-500 px-3 py-2 rounded">
+        <PlusCircle className="w-5 h-5" />
+        <span>Add Task</span>
+      </button>
+    </div> */}
     </DndProvider>
   );
 };
