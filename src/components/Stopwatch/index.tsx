@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop, DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { PlusCircle, Trash2 } from 'lucide-react';
+// import { PlusCircle, Trash2 } from 'lucide-react';
+import { CirclePlus } from 'lucide-react';
 
 const loadSound = (src) => {
   const sound = new Audio(src);
@@ -20,14 +21,42 @@ const parseTimers = (input: string): number[] => {
   return timers;
 };
 
-const timerPresets = [['3x3', '5x5', '7x3'], ['5x7', '7x2']];
+const timerPresets = [
+['3x3', '5x5', '3x7'],  // 55
+['3x5', '5x4', '3x7'],  // 56
+['3x4', '5x4', '3x7'],  // 53
+['3x3', '5x7', '2x7'],  // 58
+['3x3', '5x5', '3x7'],  // 55
+['2x7', '3x10', '5x1'], // 49
+['4x7', '2x10', '5x1'], // 53
+['3x7', '2x10', '5x1'], // 46
+];
 // desc: ['3x3', '5x5', '7x3'];
 
 const formatTime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
 
-  return `${hours > 0 ? `${hours}h ` : ''}${remainingMinutes}m`;
+  return `${hours > 0 ? `${hours}m ` : ''}${remainingMinutes}s`;
+};
+
+const summarizeIntervals = (intervals: number[]): string => {
+  const summary: { [key: number]: number } = {};
+  let totalSeconds = 0;
+  let totalRepetitions = 0;
+
+  // Подсчет количества повторений каждого интервала
+  intervals.forEach(interval => {
+    summary[interval] = (summary[interval] || 0) + 1;
+    totalSeconds += interval * 60;
+    totalRepetitions += 1;
+  });
+
+  const summaryString = Object.entries(summary)
+    .map(([interval, count]) => `${count}x${interval}`)
+    .join(', ');
+
+  return `${summaryString} = ${totalRepetitions} поз (${formatTime(totalSeconds)})`;
 };
 
 const speak = (text: string, lang: string = 'ru-RU', voiceName: string = 'Google русский') => {
@@ -160,7 +189,7 @@ export const Stopwatch: React.FC = () => {
   };
 
   const startChangePoseCountdown = () => {
-    setChangePoseTimeLeft(40);
+    setChangePoseTimeLeft(60);
     bellTickSound.play(); // Запуск звука один раз
 
     const changePoseInterval = setInterval(() => {
@@ -178,7 +207,7 @@ export const Stopwatch: React.FC = () => {
                 oneMinuteWarningRef.current = false; // Сбросим предупреждение за минуту
                 speak(`Следующая поза ${timers[currentTimerIndex + 1]} минут.`);
               }
-              setCurrentTimerIndex((prevIndex) => (prevIndex !== null ? prevIndex + 1 : null));
+              setCurrentTimerIndex((prevIndex) => (prevIndex !== null ? prevIndex : null));
               setChangePoseTimeLeft(null);
             };
             return null;
@@ -208,7 +237,7 @@ export const Stopwatch: React.FC = () => {
     }
   };
 
-  const handlePause = () => {
+  const handlePauseResume = () => {
     setIsPaused(prev => !prev);
   };
 
@@ -234,25 +263,68 @@ export const Stopwatch: React.FC = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
+       <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+      {/* <h1>Таймер для набросков</h1> */}
       <div>
+        <label>
+          
+          <input className="rounded-xl p-2" type="text" value={input} onChange={handleInputChange} />
+          <button onClick={handleStartTimers} style={{ marginLeft: '10px' }}>Старт</button>
+        <button onClick={handlePauseResume} style={{ marginLeft: '10px' }}>
+          {isPaused ? 'Продолжить' : 'Пауза'}
+        </button>
+          <div className='text-zinc-400 text-sm p-2'>Введите интервалы таймера (например, 3x3, 5x5, 3x7):{' '}</div>
+        </label>
+        
+      </div>
+      <div style={{ marginTop: '20px' }}>
+        <h2>Таймеры</h2>
+        <DndProvider backend={HTML5Backend}>
+          {timers.map((timer, index) => (
+            <TimerItem
+              key={index}
+              timer={timer}
+              index={index}
+              moveTimer={moveTimer}
+              onDelete={handleDeleteTimer}
+              currentTimerIndex={currentTimerIndex}
+              timeLeft={timeLeft}
+            />
+          ))}
+        </DndProvider>
+      </div>
+      <div style={{ marginTop: '20px' }}>
+        <h3>Итого: {summarizeIntervals(timers)}</h3>
+      </div>
+      {currentTimerIndex !== null && (
+        <div style={{ marginTop: '20px', color: 'lightgray' }}>
+          <h2>Осталось времени: {formatTime(timeLeft)}</h2>
+          {changePoseTimeLeft !== null && (
+            <h3>Смена позы через: {changePoseTimeLeft} секунд</h3>
+          )}
+        </div>
+      )}
+    </div>
+
+      {/* <div>
         <input 
           type="text" 
           value={input} 
           onChange={handleInputChange} 
-          placeholder="5x3, 3x7, 1x10"
+          placeholder="3x3, 5x5, 7x3"
           className="p-4 h-12"
-          style={{ width: '340px', borderRadius: '66px', borderColor: '#DADCE0' }}
+          style={{ width: '440px', borderRadius: '66px', borderColor: '#DADCE0' }}
         />
-        <button onClick={handleStartTimers}>Создать таймеры</button>
-        
+        <button className="my-6 py-3" onClick={handleStartTimers}><CirclePlus /></button>
+
         {totalTime > 0 && (
           <div style={{ marginTop: '10px' }}>
             <h4>Общее время: {formatTime(totalTime)}</h4>
           </div>
-        )}
+        )} */}
 
         {/* <p>{timerPresets}</p> */}
-        {timerPresets.map(paragraph => <div>{paragraph.join(', ')}</div>)}
+        {/* {timerPresets.map(paragraph => <div>{paragraph.join(', ')}</div>)} */}
         {/* <div>{timerPresets.join(',')}</div> */}
         {/* <p>{timerPresets.map((item, index) => ({(index? ', ': '') + item }))}</p> */}
 
@@ -264,9 +336,9 @@ export const Stopwatch: React.FC = () => {
         }
       </div> */}
 
-        <div style={{ marginTop: '20px' }}>
+        {/* <div style={{ marginTop: '20px' }}>
           {timers.map((timer, index) => (
-            <TimerItem 
+            <TimerItem  
               key={index}
               index={index}
               timer={timer}
@@ -299,7 +371,7 @@ export const Stopwatch: React.FC = () => {
             />
           </div>
         )}
-      </div>
+      </div> */}
       {/* <div className="max-w-sm mx-auto p-4 bg-white rounded shadow-lg">
       <h1 className="text-xl font-semibold mb-4">Task List</h1>
       <ul className="space-y-2">
