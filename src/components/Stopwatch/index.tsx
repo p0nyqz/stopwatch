@@ -206,9 +206,13 @@ export const Stopwatch: React.FC = () => {
                 nextPoseAnnouncementRef.current = false; // Сбросим флаг для следующего таймера
                 oneMinuteWarningRef.current = false; // Сбросим предупреждение за минуту
                 speak(`Следующая поза ${timers[currentTimerIndex + 1]} минут.`);
+                setCurrentTimerIndex(prevIndex => prevIndex !== null ? prevIndex + 1 : null); // Переход к следующему таймеру
+              } else {
+                setCurrentTimerIndex(null); // Все таймеры завершены
               }
-              setCurrentTimerIndex((prevIndex) => (prevIndex !== null ? prevIndex : null));
               setChangePoseTimeLeft(null);
+              // setCurrentTimerIndex((prevIndex) => (prevIndex !== null ? prevIndex : null));
+              
             };
             return null;
           }
