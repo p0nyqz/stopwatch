@@ -10,8 +10,10 @@ const loadSound = (src) => {
   return sound;
 };
 
-const bellTickSound = loadSound('/happy-bells-notification.wav');
-const happyBellSound = loadSound('/bell-ticktock.wav');
+
+const endPoseSound = loadSound('/happy-bells-notification.wav');
+// const endPoseSound = loadSound('/start-sound-8bit.mp3');
+// const startPoseSound = loadSound('/happy-bells-notification.wav');
 
 const parseTimers = (input: string): number[] => {
   const timers = input.split(',').map(timer => {
@@ -217,23 +219,26 @@ export const Stopwatch: React.FC = () => {
     speak(`Change of pose.`, ['en-US'], ['Google US English']);
     setTimeout(() => {
       startChangePoseCountdown();
-    }, 1000); // Небольшая задержка перед началом отсчета на смену позы
+    }, 5000); // Небольшая задержка перед началом отсчета на смену позы
   };
 
   const startChangePoseCountdown = () => {
     setChangePoseTimeLeft(60);
-    bellTickSound.play(); // Запуск звука один раз
+    // startPoseSound.play(); // Запуск звука один раз
+    // bellTickSound.play(); 
 
     const changePoseInterval = setInterval(() => {
       setChangePoseTimeLeft((prev) => {
         if (prev !== null) {
           if (prev <= 1) {
             clearInterval(changePoseInterval);
-            bellTickSound.pause(); // Остановка звука после 20 секунд
-            bellTickSound.currentTime = 0; // Перемотка на начало
-            happyBellSound.currentTime = 0;  // Перемотка на начало
-            happyBellSound.play();
-            happyBellSound.onended = () => { // Ждем завершения звука перед объявлением следующей позы
+            // startPoseSound.pause(); // Остановка звука после n секунд
+            // startPoseSound.currentTime = 0; // Перемотка на начало
+            // bellTickSound.pause(); 
+            // bellTickSound.currentTime = 0; // Перемотка на начало
+            endPoseSound.currentTime = 0;  // Перемотка на начало
+            endPoseSound.play();
+            endPoseSound.onended = () => { // Ждем завершения звука перед объявлением следующей позы
               if (currentTimerIndex !== null && currentTimerIndex + 1 < timers.length) {
                 nextPoseAnnouncementRef.current = false; // Сбросим флаг для следующего таймера
                 oneMinuteWarningRef.current = false; // Сбросим предупреждение за минуту
