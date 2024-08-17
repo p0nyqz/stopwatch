@@ -10,8 +10,8 @@ const loadSound = (src) => {
   return sound;
 };
 
-const bellTickSound = loadSound('/bell-ticktock.wav');
-const happyBellSound = loadSound('/happy-bells-notification.wav');
+const bellTickSound = loadSound('/happy-bells-notification.wav');
+const happyBellSound = loadSound('/bell-ticktock.wav');
 
 const parseTimers = (input: string): number[] => {
   const timers = input.split(',').map(timer => {
@@ -59,18 +59,46 @@ const summarizeIntervals = (intervals: number[]): string => {
   return `${summaryString} = ${totalRepetitions} поз (${formatTime(totalSeconds)})`;
 };
 
-const speak = (text: string, lang: string = 'ru-RU', voiceName: string = 'Google русский') => {
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = lang;
+// const speak = (
+//   text: string, 
+//   langs: string[] = ['ru-RU', 'en-US'], 
+//   voiceNames: string[] = ['Google русский', 'Google US English']) => {
+//   const utterance = new SpeechSynthesisUtterance(text);
+//   utterance.lang = lang;
 
+//   const voices = speechSynthesis.getVoices();
+//   const selectedVoice = voices.find(voice => voice.name === voiceName);
+
+//   if (selectedVoice) {
+//     utterance.voice = selectedVoice;
+//   }
+
+//   speechSynthesis.speak(utterance);
+// };
+
+const speak = (
+  text: string, 
+  langs: string[] = ['ru-RU', 'en-US'], 
+  voiceNames: string[] = ['Google русский', 'Google US English']
+) => {
   const voices = speechSynthesis.getVoices();
-  const selectedVoice = voices.find(voice => voice.name === voiceName);
 
-  if (selectedVoice) {
-    utterance.voice = selectedVoice;
-  }
+  langs.forEach((lang, index) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
 
-  speechSynthesis.speak(utterance);
+    const selectedVoice = voices.find(voice => 
+      voice.name === voiceNames[index] && voice.lang === lang
+    );
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    } else {
+      console.warn(`Не удалось найти подходящий голос для озвучивания на языке: ${lang}`);
+    }
+
+    speechSynthesis.speak(utterance);
+  });
 };
 
 const TimerItem = ({ timer, index, moveTimer, onDelete, currentTimerIndex, timeLeft }) => {
@@ -157,7 +185,9 @@ export const Stopwatch: React.FC = () => {
 
       // Объявляем следующую позу только один раз
       if (!nextPoseAnnouncementRef.current) {
-        speak(`Следующая поза ${currentTimer} минут.`);
+        // speak(`Следующая поза ${currentTimer} минут.`);
+        speak(`Следующая поза ${currentTimer} минут.`, ['ru-RU'], ['Google русский']);
+        speak(`Next pose ${currentTimer} minutes.`, ['en-US'], ['Google US English']);
         nextPoseAnnouncementRef.current = true;
       }
 
@@ -165,7 +195,8 @@ export const Stopwatch: React.FC = () => {
         setTimeLeft(prev => {
           if (prev === 60 && !oneMinuteWarningRef.current && currentTimer > 1) {
             // Если таймер не равен одной минуте, произносим предупреждение
-            speak('Осталась одна минута.');
+            speak('Осталась одна минута.', ['ru-RU'], ['Google русский']);
+            speak(`One minute left`, ['en-US'], ['Google US English']);
             oneMinuteWarningRef.current = true; // Установим флаг, чтобы предупредить только один раз
           }
           if (prev <= 1) {
@@ -182,7 +213,8 @@ export const Stopwatch: React.FC = () => {
   }, [currentTimerIndex, timers, isPaused]);
 
   const handleEndOfTimer = () => {
-    speak('Смена позы.');
+    speak('Смена позы.', ['ru-RU'], ['Google русский']);
+    speak(`Change of pose.`, ['en-US'], ['Google US English']);
     setTimeout(() => {
       startChangePoseCountdown();
     }, 1000); // Небольшая задержка перед началом отсчета на смену позы
@@ -205,7 +237,8 @@ export const Stopwatch: React.FC = () => {
               if (currentTimerIndex !== null && currentTimerIndex + 1 < timers.length) {
                 nextPoseAnnouncementRef.current = false; // Сбросим флаг для следующего таймера
                 oneMinuteWarningRef.current = false; // Сбросим предупреждение за минуту
-                speak(`Следующая поза ${timers[currentTimerIndex + 1]} минут.`);
+                speak(`Следующая поза ${timers[currentTimerIndex + 1]} минут.`, ['ru-RU'], ['Google русский']);
+                speak(`Next pose ${timers[currentTimerIndex + 1]} minutes.`, ['en-US'], ['Google US English']);
                 setCurrentTimerIndex(prevIndex => prevIndex !== null ? prevIndex + 1 : null); // Переход к следующему таймеру
               } else {
                 setCurrentTimerIndex(null); // Все таймеры завершены
