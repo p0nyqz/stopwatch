@@ -21,11 +21,11 @@ function App() {
       <img
           src={nabrososhnayaLogo}
           alt="Набросошная"
-          className="pt-10 mr-10 w-60" // Добавьте отступ снизу, если нужно // Настройка размера логотипа
+          className="pt-5 mr-10 w-60" // Добавьте отступ снизу, если нужно // Настройка размера логотипа
         />
       </div>
 
-      <div className="w-100">
+      <div className="w-96">
       <Stopwatch/>
       </div>
       <div className="w-200">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop, DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-// import { PlusCircle, Trash2 } from 'lucide-react';
+import { Play, Trash2 } from 'lucide-react';
 import { CirclePlus } from 'lucide-react';
 
 const loadSound = (src) => {
@@ -23,17 +23,26 @@ const parseTimers = (input: string): number[] => {
   return timers;
 };
 
-const timerPresets = [
-['3x3', '5x5', '3x7'],  // 55
-['3x5', '5x4', '3x7'],  // 56
-['3x4', '5x4', '3x7'],  // 53
-['3x3', '5x7', '2x7'],  // 58
-['3x3', '5x5', '3x7'],  // 55
-['2x7', '3x10', '5x1'], // 49
-['4x7', '2x10', '5x1'], // 53
-['3x7', '2x10', '5x1'], // 46
-];
-// desc: ['3x3', '5x5', '7x3'];
+const timerPresets = {
+  group1: [
+    ['3x3', '5x5', '3x7'],
+    ['2x3', '5x7', '2x7'],
+  ],
+  group2: [
+    ['3x3', '5x5', '3x7'],
+    ['2x7', '3x10', '5x1'],
+    ['4x7', '2x10', '5x1'],
+    ['3x7', '2x10', '5x1'],
+  ]
+};
+
+const calculateTotalTime = (preset: string[]): string => {
+  const totalMinutes = preset
+    .map(item => item.split('x').map(Number)) // ['3x3'] => [3, 3]
+    .reduce((total, [count, duration]) => total + count * duration, 0); // Total minutes
+
+  return `${totalMinutes} мин`;
+};
 
 const formatTime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
@@ -54,29 +63,16 @@ const summarizeIntervals = (intervals: number[]): string => {
     totalRepetitions += 1;
   });
 
-  const summaryString = Object.entries(summary)
-    .map(([interval, count]) => `${count}x${interval}`)
-    .join(', ');
+  return `${totalRepetitions} поз`;
 
-  return `${summaryString} = ${totalRepetitions} поз (${formatTime(totalSeconds)})`;
+  // const summaryString = Object.entries(summary)
+  //   .map(([interval, count]) => `${count}x${interval}`)
+  //   .join(', ');
+
+  // return `${summaryString} = ${totalRepetitions} поз (${formatTime(totalSeconds)})`;
+
+  
 };
-
-// const speak = (
-//   text: string, 
-//   langs: string[] = ['ru-RU', 'en-US'], 
-//   voiceNames: string[] = ['Google русский', 'Google US English']) => {
-//   const utterance = new SpeechSynthesisUtterance(text);
-//   utterance.lang = lang;
-
-//   const voices = speechSynthesis.getVoices();
-//   const selectedVoice = voices.find(voice => voice.name === voiceName);
-
-//   if (selectedVoice) {
-//     utterance.voice = selectedVoice;
-//   }
-
-//   speechSynthesis.speak(utterance);
-// };
 
 const speak = (
   text: string, 
@@ -138,12 +134,12 @@ const TimerItem = ({ timer, index, moveTimer, onDelete, currentTimerIndex, timeL
     >
       <div 
         style={{
-          width: '200px',
-          height: '30px',
-          background: currentTimerIndex === index ? 'lightgreen' : 'lightgray',
+          width: '100%',
+          height: '40px',
+          background: currentTimerIndex === index ? 'white' : '#E7E7E7',
           position: 'relative',
           overflow: 'hidden',
-          borderRadius: '5px',
+          borderRadius: '20px',
           marginRight: '10px',
         }}
       >
@@ -154,15 +150,16 @@ const TimerItem = ({ timer, index, moveTimer, onDelete, currentTimerIndex, timeL
               top: 0,
               left: 0,
               height: '100%',
+              borderRadius: `20px`,
               width: `${((timer * 60 - timeLeft) / (timer * 60)) * 100}%`,
-              background: 'green',
-              transition: 'width 1s linear'
+              background: 'lightgreen',
+              transition: 'width 1s linear',
             }}
           />
         )}
       </div>
-      <span style={{ marginLeft: '10px' }}>{timer} мин</span>
-      <button onClick={() => onDelete(index)} style={{ marginLeft: '10px' }}>Удалить</button>
+      <span style={{ marginLeft: '16px', position: 'absolute'}}>{timer}</span>
+      <button onClick={() => onDelete(index)} className='ml-1 p-2 rounded-full hover:border-white'><Trash2 className='text-zinc-400 p-0.5 hover:text-black'/></button>
     </div>
   );
 };
@@ -177,6 +174,19 @@ export const Stopwatch: React.FC = () => {
   const [changePoseTimeLeft, setChangePoseTimeLeft] = useState<number | null>(null);
   const oneMinuteWarningRef = useRef(false); // Для предотвращения повторного предупреждения
   const nextPoseAnnouncementRef = useRef(false); // Для предотвращения повторного объявления следующей позы
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
+    // Функция для обработки выбора пресета
+    const handlePresetSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const selectedPreset = event.target.value;
+      setInput(selectedPreset);
+  
+      const parsedTimers = parseTimers(selectedPreset);
+      setTimers(parsedTimers);
+  
+      const totalMinutes = parsedTimers.reduce((acc, timer) => acc + timer, 0);
+      setTotalTime(totalMinutes);
+    };
 
   useEffect(() => {
     if (currentTimerIndex !== null && currentTimerIndex < timers.length) {
@@ -188,38 +198,68 @@ export const Stopwatch: React.FC = () => {
       // Объявляем следующую позу только один раз
       if (!nextPoseAnnouncementRef.current) {
         // speak(`Следующая поза ${currentTimer} минут.`);
-        speak(`Следующая поза ${currentTimer} минут.`, ['ru-RU'], ['Google русский']);
-        speak(`Next pose ${currentTimer} minutes.`, ['en-US'], ['Google US English']);
+        if (currentTimer === 1) {
+          speak(`Следующая поза одна минута.`, ['ru-RU'], ['Google русский']);
+          speak(`Next pose one minute.`, ['en-US'], ['Google US English']);
+        }
+        else if (currentTimer >= 2 && currentTimer <= 4) {
+          speak(`Следующая поза ${currentTimer} минуты.`, ['ru-RU'], ['Google русский']);
+          speak(`Next pose ${currentTimer} minutes.`, ['en-US'], ['Google US English']);
+        } else {
+          speak(`Следующая поза ${currentTimer} минут.`, ['ru-RU'], ['Google русский']);
+          speak(`Next pose ${currentTimer} minutes.`, ['en-US'], ['Google US English']);
+        }
         nextPoseAnnouncementRef.current = true;
       }
 
-      const interval = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev === 60 && !oneMinuteWarningRef.current && currentTimer > 1) {
-            // Если таймер не равен одной минуте, произносим предупреждение
-            speak('Осталась одна минута.', ['ru-RU'], ['Google русский']);
-            speak(`One minute left`, ['en-US'], ['Google US English']);
-            oneMinuteWarningRef.current = true; // Установим флаг, чтобы предупредить только один раз
-          }
-          if (prev <= 1) {
-            clearInterval(interval);
-            handleEndOfTimer();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      // Устанавливаем интервал, если он еще не установлен
+      if (intervalRef.current === null) {
+        intervalRef.current = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev === 60 && !oneMinuteWarningRef.current && currentTimer > 1) {
+              // Предупреждаем за минуту до конца
+              speak('Осталась одна минута.', ['ru-RU'], ['Google русский']);
+              speak('One minute left', ['en-US'], ['Google US English']);
+              oneMinuteWarningRef.current = true;
+            }
+            if (prev <= 1) {
+              clearInterval(intervalRef.current!);
+              intervalRef.current = null; // Сбрасываем ссылку на интервал
+              handleEndOfTimer();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
 
-      return () => clearInterval(interval);
+      return () => {
+        if (intervalRef.current !== null) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null; // Сбрасываем ссылку на интервал
+        }
+      };
     }
   }, [currentTimerIndex, timers, isPaused]);
 
   const handleEndOfTimer = () => {
-    speak('Смена позы.', ['ru-RU'], ['Google русский']);
-    speak(`Change of pose.`, ['en-US'], ['Google US English']);
-    setTimeout(() => {
-      startChangePoseCountdown();
-    }, 5000); // Небольшая задержка перед началом отсчета на смену позы
+    const isLastTimer = currentTimerIndex === timers.length - 1;
+    const isSecondToLastTimer = currentTimerIndex === timers.length - 2;
+  
+    if (isLastTimer) {
+      speak('Перерыв', ['ru-RU'], ['Google русский']);
+      speak('Break', ['en-US'], ['Google US English']);
+    } else {
+      speak('Смена позы', ['ru-RU'], ['Google русский']);
+      speak('Change of pose', ['en-US'], ['Google US English']);
+  
+      setTimeout(startChangePoseCountdown, 5000); // Задержка перед отсчетом смены позы
+  
+      if (isSecondToLastTimer) {
+        speak('Последняя поза', ['ru-RU'], ['Google русский']);
+        speak('Last pose', ['en-US'], ['Google US English']);
+      }
+    }
   };
 
   const startChangePoseCountdown = () => {
@@ -307,20 +347,65 @@ export const Stopwatch: React.FC = () => {
     <DndProvider backend={HTML5Backend}>
        <div style={{ padding: '20px', fontFamily: 'Arial' }}>
       {/* <h1>Таймер для набросков</h1> */}
-      <div>
+      <div className='flex'>
+
+        <div>
         <label>
-          
-          <input className="rounded-xl p-2" type="text" value={input} onChange={handleInputChange} />
-          <button onClick={handleStartTimers} style={{ marginLeft: '10px' }}>Старт</button>
-        <button onClick={handlePauseResume} style={{ marginLeft: '10px' }}>
+          <input className="flex rounded-md p-2" type="text" value={input} onChange={handleInputChange} />
+        {/* <button onClick={handlePauseResume} style={{ marginLeft: '10px' }}>
           {isPaused ? 'Продолжить' : 'Пауза'}
-        </button>
-          <div className='text-zinc-400 text-sm p-2'>Введите интервалы таймера (например, 3x3, 5x5, 3x7):{' '}</div>
+        </button> */}
+        {/* <div className='desc-text w-100'>Введите интервалы таймера (3x3, 5x5, 3x7)</div> */}
         </label>
+        </div>
         
+        <div>
+          {/* <h2>Выберите пресет</h2> */}
+          <select 
+            onChange={handlePresetSelect}
+            style={{ padding: '10px', marginBottom:'0px' }}
+            defaultValue=""
+          >
+            <option value="" disabled>Выберите пресет...</option>
+            
+            <optgroup label="Первый час">
+              {timerPresets.group1.map((preset, index) => (
+                <option 
+                  key={`group1-${index}`} 
+                  value={preset.join(', ')}
+                >
+                  {preset.join(', ')} ({calculateTotalTime(preset)})
+                </option>
+              ))}
+            </optgroup>
+            
+            <optgroup label="Второй час">
+              {timerPresets.group2.map((preset, index) => (
+                <option 
+                  key={`group2-${index}`} 
+                  value={preset.join(', ')}
+                >
+                  {preset.join(', ')} ({calculateTotalTime(preset)})
+                </option>
+              ))}
+            </optgroup>
+          </select>
+        </div>
+
+        <div>
+        <button onClick={handleStartTimers} className='flex text-white p-2 ml-3 rounded-full bg-neutral-800 hover:bg-neutral-700 hover:border-neutral-700 active:bg-green-500 active:border-green-500'><Play/></button>
+        </div>
+
       </div>
-      <div style={{ marginTop: '20px' }}>
-        <h2>Таймеры</h2>
+      
+        {/* Добавляем выпадающий список для пресетов с группами */}
+
+        <div className='desc-text'>
+          <h3>Итого: {summarizeIntervals(timers)}</h3>
+        </div>
+
+      <div className='mt-4 '>
+        <h2 className='pb-2'>Таймеры</h2>
         <DndProvider backend={HTML5Backend}>
           {timers.map((timer, index) => (
             <TimerItem
@@ -335,11 +420,9 @@ export const Stopwatch: React.FC = () => {
           ))}
         </DndProvider>
       </div>
-      <div style={{ marginTop: '20px' }}>
-        <h3>Итого: {summarizeIntervals(timers)}</h3>
-      </div>
+
       {currentTimerIndex !== null && (
-        <div style={{ marginTop: '20px', color: 'lightgray' }}>
+        <div className='desc-text'>
           <h2>Осталось времени: {formatTime(timeLeft)}</h2>
           {changePoseTimeLeft !== null && (
             <h3>Смена позы через: {changePoseTimeLeft} секунд</h3>
@@ -347,90 +430,6 @@ export const Stopwatch: React.FC = () => {
         </div>
       )}
     </div>
-
-      {/* <div>
-        <input 
-          type="text" 
-          value={input} 
-          onChange={handleInputChange} 
-          placeholder="3x3, 5x5, 7x3"
-          className="p-4 h-12"
-          style={{ width: '440px', borderRadius: '66px', borderColor: '#DADCE0' }}
-        />
-        <button className="my-6 py-3" onClick={handleStartTimers}><CirclePlus /></button>
-
-        {totalTime > 0 && (
-          <div style={{ marginTop: '10px' }}>
-            <h4>Общее время: {formatTime(totalTime)}</h4>
-          </div>
-        )} */}
-
-        {/* <p>{timerPresets}</p> */}
-        {/* {timerPresets.map(paragraph => <div>{paragraph.join(', ')}</div>)} */}
-        {/* <div>{timerPresets.join(',')}</div> */}
-        {/* <p>{timerPresets.map((item, index) => ({(index? ', ': '') + item }))}</p> */}
-
-        {/* <div>
-        {
-          this.props.data.map(function(item, index) {
-            return <span key={`timerPresets${index}`}>{ (index ? ', ' : '') + item }</span>;
-          })
-        }
-      </div> */}
-
-        {/* <div style={{ marginTop: '20px' }}>
-          {timers.map((timer, index) => (
-            <TimerItem  
-              key={index}
-              index={index}
-              timer={timer}
-              moveTimer={moveTimer}
-              onDelete={handleDeleteTimer}
-              currentTimerIndex={currentTimerIndex}
-              timeLeft={timeLeft}
-            />
-          ))}
-        </div>
-
-        {currentTimerIndex !== null && (
-          <button onClick={handlePause} style={{ marginTop: '10px' }}>
-            {isPaused ? 'Продолжить' : 'Пауза'}
-          </button>
-        )}
-
-        {changePoseTimeLeft !== null && (
-          <div style={{ marginTop: '20px', width: '100%', height: '30px', backgroundColor: 'lightgray', borderRadius: '5px', overflow: 'hidden', position: 'relative' }}>
-            <div 
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                height: '100%',
-                width: `${(40 - changePoseTimeLeft) / 40 * 100}%`,
-                backgroundColor: 'orange',
-                transition: 'width 1s linear'
-              }}
-            />
-          </div>
-        )}
-      </div> */}
-      {/* <div className="max-w-sm mx-auto p-4 bg-white rounded shadow-lg">
-      <h1 className="text-xl font-semibold mb-4">Task List</h1>
-      <ul className="space-y-2">
-        <li className="flex items-center justify-between p-2 bg-gray-100 rounded">
-          <span>Task 1</span>
-          <Trash2 className="w-5 h-5 text-red-500 cursor-pointer" />
-        </li>
-        <li className="flex items-center justify-between p-2 bg-gray-100 rounded">
-          <span>Task 2</span>
-          <Trash2 className="w-5 h-5 text-red-500 cursor-pointer" />
-        </li>
-      </ul>
-      <button className="mt-4 flex items-center space-x-2 text-white bg-blue-500 px-3 py-2 rounded">
-        <PlusCircle className="w-5 h-5" />
-        <span>Add Task</span>
-      </button>
-    </div> */}
     </DndProvider>
   );
 };

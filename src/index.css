@@ -53,6 +53,7 @@ button {
 }
 button:hover {
   border-color: #646cff;
+  /* background-color: white; */
 }
 button:focus,
 button:focus-visible {
@@ -70,4 +71,23 @@ button:focus-visible {
   button {
     background-color: #f9f9f9;
   }
+}
+
+select {
+  margin-bottom: 20px;
+  padding: 10px;
+  padding-left: 10px;
+  border-radius: 5px;
+  width: 100%;
+  background-position-x: 10px;
+  /* style={{
+    // appearance: 'none',
+    // WebkitAppearance: 'none',
+    // backgroundColor: '#ffffff',
+    // background: 'url(../public/chevron.svg) no-repeat right 10px center'
+    }} */
+}
+
+.desc-text {
+  @apply text-zinc-400 text-sm p-2 pl-1;
 }

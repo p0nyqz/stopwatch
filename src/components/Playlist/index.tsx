@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
 
 const playlists = [
   { 
@@ -48,24 +47,9 @@ export const Playlist: React.FC = () => {
     setSelectedPlaylist(e.target.value);
   };
 
-
-  
   return (
     <div style={{ padding: '20px', textAlign: 'center' }}>
-      <select onChange={handlePlaylistChange} 
-      style={{ marginBottom: '20px', 
-              padding: '10px', 
-              paddingRight: '20px',
-              borderRadius: '5px', 
-              width: '100%',
-              backgroundPositionX: '10px',
-              // appearance: 'none',
-              // WebkitAppearance: 'none',
-              backgroundColor: '#ffffff',
-              paddingRight: '40px',
-              // background: 'url(../public/react.svg) no-repeat right 10px center'
-              // background: `url(${ChevronDown}) no-repeat right 10px center`,
-              }}>
+      <select onChange={handlePlaylistChange}>
         {playlists.map((group, index) => (
           <optgroup key={index} label={group.category}>
             {group.playlist.map((playlist, subIndex) => (
@@ -85,20 +69,6 @@ export const Playlist: React.FC = () => {
         src={selectedPlaylist}
       ></iframe>
     </div>
-
-
-      {/* <div style="left: 0; width: 100%; height: 800px; position: relative;">
-        <iframe
-          allow="autoplay *; encrypted-media *; fullscreen *; clipboard-write"
-          frameBorder="0"
-          height="460px"
-          style="top: 0; left: 0; width: 100%; height: 100%; position: absolute; border: 0;"
-          allowfullscreen
-          // style={{ width: '100%', maxWidth: '600px', overflow: 'hidden', borderRadius: '10px' }}
-          // sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation"
-          src={selectedPlaylist}
-        ></iframe>
-      </div> */}
     </div>
   );
 };
