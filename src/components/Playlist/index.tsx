@@ -48,8 +48,10 @@ export const Playlist: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '20px', textAlign: 'center' }}>
-      <select onChange={handlePlaylistChange}>
+    <div className="p-4 rounded-lg">
+      <select 
+        className="p-2.5 rounded-lg"
+        onChange={handlePlaylistChange}>
         {playlists.map((group, index) => (
           <optgroup key={index} label={group.category}>
             {group.playlist.map((playlist, subIndex) => (

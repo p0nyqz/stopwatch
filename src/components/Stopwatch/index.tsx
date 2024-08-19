@@ -1,8 +1,28 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop, DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { Play, Trash2 } from 'lucide-react';
-import { CirclePlus } from 'lucide-react';
+import { FaPlay } from "react-icons/fa6";
+import { FiSearch } from "react-icons/fi";
+import { FiTrash2 } from "react-icons/fi";
+
+const timerPresets = {
+  group1: [
+    // количество поз x количество минут
+    ['3x3', '5x5', '3x7'],
+    ['2x3', '7x5', '2x7'],
+    ['1x3', '6x5', '3x7'],
+    ['8x5', '2x7'],
+    ['7x5', '3x7'],
+    ['6x5', '3x7'],
+  ],
+  group2: [
+    ['3x7', '2x10', '5x1'],
+    ['2x7', '3x10', '5x1'],
+    ['4x7', '2x10', '5x1'],
+    ['4x7', '2x10'],
+    ['4x10', '5x1'],
+  ]
+};
 
 const loadSound = (src) => {
   const sound = new Audio(src);
@@ -10,11 +30,11 @@ const loadSound = (src) => {
   return sound;
 };
 
-
 const endPoseSound = loadSound('/happy-bells-notification.wav');
 // const endPoseSound = loadSound('/start-sound-8bit.mp3');
 // const startPoseSound = loadSound('/happy-bells-notification.wav');
 
+// parseTimers
 const parseTimers = (input: string): number[] => {
   const timers = input.split(',').map(timer => {
     const [count, duration] = timer.trim().split('x').map(Number);
@@ -23,26 +43,18 @@ const parseTimers = (input: string): number[] => {
   return timers;
 };
 
-const timerPresets = {
-  group1: [
-    ['3x3', '5x5', '3x7'],
-    ['2x3', '5x7', '2x7'],
-  ],
-  group2: [
-    ['3x3', '5x5', '3x7'],
-    ['2x7', '3x10', '5x1'],
-    ['4x7', '2x10', '5x1'],
-    ['3x7', '2x10', '5x1'],
-  ]
-};
-
+// calculateTotalTime
 const calculateTotalTime = (preset: string[]): string => {
   const totalMinutes = preset
     .map(item => item.split('x').map(Number)) // ['3x3'] => [3, 3]
     .reduce((total, [count, duration]) => total + count * duration, 0); // Total minutes
-
   return `${totalMinutes} мин`;
 };
+// Новая функция для расчета общего времени всех таймеров
+// const calculateTotalTime = (timers: number[]): string => {
+//   const totalMinutes = timers.reduce((acc, timer) => acc + timer, 0);
+//   return `${totalMinutes} мин`;
+// };
 
 const formatTime = (minutes: number): string => {
   const hours = Math.floor(minutes / 60);
@@ -63,7 +75,7 @@ const summarizeIntervals = (intervals: number[]): string => {
     totalRepetitions += 1;
   });
 
-  return `${totalRepetitions} поз`;
+  return `${totalRepetitions} поз (${formatTime(totalSeconds)})`;
 
   // const summaryString = Object.entries(summary)
   //   .map(([interval, count]) => `${count}x${interval}`)
@@ -159,7 +171,7 @@ const TimerItem = ({ timer, index, moveTimer, onDelete, currentTimerIndex, timeL
         )}
       </div>
       <span style={{ marginLeft: '16px', position: 'absolute'}}>{timer}</span>
-      <button onClick={() => onDelete(index)} className='ml-1 p-2 rounded-full hover:border-white'><Trash2 className='text-zinc-400 p-0.5 hover:text-black'/></button>
+      <button onClick={() => onDelete(index)} className='ml-1 p-2 rounded-full hover:border-white'><FiTrash2 className='text-zinc-400 hover:text-black'/></button>
     </div>
   );
 };
@@ -168,6 +180,8 @@ export const Stopwatch: React.FC = () => {
   const [input, setInput] = useState('');
   const [timers, setTimers] = useState<number[]>([]);
   const [totalTime, setTotalTime] = useState(0);
+  const [displayTime, setDisplayTime] = useState(''); // Состояние для отображения общего времени в select
+  
   const [currentTimerIndex, setCurrentTimerIndex] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -176,17 +190,22 @@ export const Stopwatch: React.FC = () => {
   const nextPoseAnnouncementRef = useRef(false); // Для предотвращения повторного объявления следующей позы
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-    // Функция для обработки выбора пресета
-    const handlePresetSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
-      const selectedPreset = event.target.value;
-      setInput(selectedPreset);
+  // Функция для обработки выбора пресета
+  const handlePresetSelect = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedPreset = event.target.value;
   
-      const parsedTimers = parseTimers(selectedPreset);
-      setTimers(parsedTimers);
+    // Парсинг выбранных таймеров
+    const parsedTimers = parseTimers(selectedPreset);
+    setTimers(parsedTimers);
   
-      const totalMinutes = parsedTimers.reduce((acc, timer) => acc + timer, 0);
-      setTotalTime(totalMinutes);
-    };
+    // Вычисление общего времени
+    const totalMinutes = calculateTotalTime(parsedTimers);
+    setTotalTime(totalMinutes);
+    
+    // Устанавливаем отображаемое время в состоянии
+    // setDisplayTime(`${totalMinutes} мин`);
+  };
+  
 
   useEffect(() => {
     if (currentTimerIndex !== null && currentTimerIndex < timers.length) {
@@ -345,13 +364,16 @@ export const Stopwatch: React.FC = () => {
 
   return (
     <DndProvider backend={HTML5Backend}>
-       <div style={{ padding: '20px', fontFamily: 'Arial' }}>
+       <div className='p-4 font-sans-serif'>
       {/* <h1>Таймер для набросков</h1> */}
       <div className='flex'>
-
         <div>
         <label>
-          <input className="flex rounded-md p-2" type="text" value={input} onChange={handleInputChange} />
+          <input 
+          className="flex p-2 rounded-l-lg border-r-2" 
+          type="text" value={input} 
+          onChange={handleInputChange} 
+          placeholder="3x3, 5x5, 3x7"/>
         {/* <button onClick={handlePauseResume} style={{ marginLeft: '10px' }}>
           {isPaused ? 'Продолжить' : 'Пауза'}
         </button> */}
@@ -363,12 +385,14 @@ export const Stopwatch: React.FC = () => {
           {/* <h2>Выберите пресет</h2> */}
           <select 
             onChange={handlePresetSelect}
-            style={{ padding: '10px', marginBottom:'0px' }}
+            className='p-2.5 mb-0 rounded-none rounded-r-lg'
+            // value={calculateTotalTime(preset)} // Используем `displayTime` для отображения общего времени
+            // value={displayTime} // Используем `displayTime` для отображения общего времени
             defaultValue=""
           >
-            <option value="" disabled>Выберите пресет...</option>
+            <option value="" disabled>Пресеты</option>
             
-            <optgroup label="Первый час">
+            <optgroup label="Для первого часа">
               {timerPresets.group1.map((preset, index) => (
                 <option 
                   key={`group1-${index}`} 
@@ -379,7 +403,7 @@ export const Stopwatch: React.FC = () => {
               ))}
             </optgroup>
             
-            <optgroup label="Второй час">
+            <optgroup label="Для второго часа">
               {timerPresets.group2.map((preset, index) => (
                 <option 
                   key={`group2-${index}`} 
@@ -393,7 +417,7 @@ export const Stopwatch: React.FC = () => {
         </div>
 
         <div>
-        <button onClick={handleStartTimers} className='flex text-white p-2 ml-3 rounded-full bg-neutral-800 hover:bg-neutral-700 hover:border-neutral-700 active:bg-green-500 active:border-green-500'><Play/></button>
+        <button onClick={handleStartTimers} className='flex text-white p-2 ml-3 rounded-full bg-neutral-800 hover:bg-neutral-700 hover:border-neutral-700 active:bg-green-500 active:border-green-500'><FaPlay /></button>
         </div>
 
       </div>
@@ -401,11 +425,16 @@ export const Stopwatch: React.FC = () => {
         {/* Добавляем выпадающий список для пресетов с группами */}
 
         <div className='desc-text'>
-          <h3>Итого: {summarizeIntervals(timers)}</h3>
+          {timers.length === 0 ? null : (
+            <h3>Итого: {summarizeIntervals(timers)}</h3>
+            
+          )}
         </div>
 
-      <div className='mt-4 '>
-        <h2 className='pb-2'>Таймеры</h2>
+      <div>
+         {timers.length === 0 ? ( <h2 className='desc-text w-72 pt-2'>Введите интервал x количество минут (например, 3x3, 5x7 - 3 позы по 3 минуты, 5 поз по 7 минут)  или выберите значение из заготовленных пресетов.</h2>
+          ) : ( <h2 className='pb-2 mt-4'>Таймеры</h2>
+          )}
         <DndProvider backend={HTML5Backend}>
           {timers.map((timer, index) => (
             <TimerItem

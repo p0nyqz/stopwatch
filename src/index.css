@@ -89,5 +89,5 @@ select {
 }
 
 .desc-text {
-  @apply text-zinc-400 text-sm p-2 pl-1;
+  @apply text-zinc-400 text-sm mt-2 pl-1;
 }
