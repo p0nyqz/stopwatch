@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop, DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { FaPlay } from "react-icons/fa6";
+import { FaPlay, FaStop } from "react-icons/fa6";
 import { FiSearch } from "react-icons/fi";
 import { FiTrash2 } from "react-icons/fi";
+import { IoCloseSharp } from "react-icons/io5";
 
 const timerPresets = {
   group1: [
@@ -170,9 +171,9 @@ const TimerItem = ({ timer, index, moveTimer, onDelete, currentTimerIndex, timeL
           />
         )}
       </div>
-      <span style={{ marginLeft: '16px', position: 'absolute'}}>{timer}</span>
-      <button onClick={() => onDelete(index)} className='ml-1 p-2 rounded-full hover:border-white'><FiTrash2 className='text-zinc-400 hover:text-black'/></button>
-    </div>
+      <span style={{ marginLeft: '16px', position: 'absolute' }}>{timer}</span>
+      <button onClick={() => onDelete(index)} className='ml-1 p-2 rounded-full hover:border-white'><IoCloseSharp className='text-zinc-400 hover:text-black'/></button>
+      </div>
   );
 };
 
@@ -362,6 +363,24 @@ export const Stopwatch: React.FC = () => {
     setTimers(updatedTimers);
   };
 
+  // Функция для сброса всех состояний
+const resetAll = () => {
+  setInput('');                 // Сбрасываем текстовое поле ввода
+  setTimers([]);                // Очищаем список таймеров
+  setTotalTime(0);              // Сбрасываем общее время
+  setDisplayTime('');           // Сбрасываем отображаемое время
+  setCurrentTimerIndex(null);   // Сбрасываем индекс текущего таймера
+  setTimeLeft(0);               // Сбрасываем оставшееся время
+  setIsPaused(false);           // Сбрасываем состояние паузы
+  setChangePoseTimeLeft(null);  // Сбрасываем отсчет смены позы
+  nextPoseAnnouncementRef.current = false; // Сбрасываем флаг объявления следующей позы
+  oneMinuteWarningRef.current = false;     // Сбрасываем предупреждение за минуту
+  if (intervalRef.current !== null) {      // Очищаем интервал если он существует
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  }
+};
+
   return (
     <DndProvider backend={HTML5Backend}>
        <div className='p-4 font-sans-serif'>
@@ -416,8 +435,28 @@ export const Stopwatch: React.FC = () => {
           </select>
         </div>
 
-        <div>
+        {/* <div>
         <button onClick={handleStartTimers} className='flex text-white p-2 ml-3 rounded-full bg-neutral-800 hover:bg-neutral-700 hover:border-neutral-700 active:bg-green-500 active:border-green-500'><FaPlay /></button>
+        </div> */}
+
+        <div>
+          {currentTimerIndex === null ? (
+            // Кнопка Play, если таймеры не запущены
+            <button 
+              onClick={handleStartTimers} 
+              className='flex text-white p-2 ml-3 rounded-full bg-neutral-800 hover:bg-neutral-700 hover:border-neutral-700 active:bg-green-500 active:border-green-500'
+            >
+              <FaPlay />
+            </button>
+          ) : (
+            // Кнопка Reset, если таймеры запущены
+            <button 
+              onClick={resetAll} 
+              className='flex text-white p-2 ml-3 rounded-full bg-red-600 hover:bg-red-500 hover:border-red-500 active:bg-red-700 active:border-red-700'
+            >
+              <FaStop /> {/* Используем символ стрелки для сброса */}
+            </button>
+          )}
         </div>
 
       </div>
