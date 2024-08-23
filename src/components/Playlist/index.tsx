@@ -4,6 +4,7 @@ const playlists = [
   { 
     category: 'Набросошная',
     playlist: [ 
+      { name: 'Music', link: "https://embed.music.apple.com/me/playlist/%D0%BD%D0%B0%D0%B1%D1%80%D0%BE%D1%81%D0%BE%D1%88%D0%BD%D0%B0%D1%8F-music/pl.u-GgA5YYmUoklKP9" },
       { name: 'Набросошная', link: "https://embed.music.apple.com/me/playlist/%D0%BD%D0%B0%D0%B1%D1%80%D0%BE%D1%81%D0%BE%D1%88%D0%BD%D0%B0%D1%8F/pl.u-oZylMvYsGAe9rM" },
       { name: 'Universal', link: "https://embed.music.apple.com/me/playlist/%D0%BD%D0%B0%D0%B1%D1%80%D0%BE%D1%81%D0%BE%D1%88%D0%BD%D0%B0%D1%8F-universal/pl.u-WabZlZ3He9XD1j" },
       { name: 'Active', link: "https://embed.music.apple.com/me/playlist/%D0%BD%D0%B0%D0%B1%D1%80%D0%BE%D1%81%D0%BE%D1%88%D0%BD%D0%B0%D1%8F-active/pl.u-NpXmYYpC46Z3GP" },

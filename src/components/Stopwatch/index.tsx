@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useDrag, useDrop, DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { FaPlay, FaStop } from "react-icons/fa6";
-import { FiSearch } from "react-icons/fi";
-import { FiTrash2 } from "react-icons/fi";
 import { IoCloseSharp } from "react-icons/io5";
 
 const timerPresets = {
@@ -444,7 +442,7 @@ const resetAll = () => {
             // Кнопка Play, если таймеры не запущены
             <button 
               onClick={handleStartTimers} 
-              className='flex text-white p-2 ml-3 rounded-full bg-neutral-800 hover:bg-neutral-700 hover:border-neutral-700 active:bg-green-500 active:border-green-500'
+              className='flex text-white p-2.5 ml-3 rounded-full bg-neutral-800 hover:bg-neutral-700 hover:border-neutral-700 active:bg-green-500 active:border-green-500'
             >
               <FaPlay />
             </button>
@@ -452,7 +450,7 @@ const resetAll = () => {
             // Кнопка Reset, если таймеры запущены
             <button 
               onClick={resetAll} 
-              className='flex text-white p-2 ml-3 rounded-full bg-red-600 hover:bg-red-500 hover:border-red-500 active:bg-red-700 active:border-red-700'
+              className='flex text-white p-2.5 ml-3 rounded-full bg-red-600 hover:bg-red-500 hover:border-red-500 active:bg-red-700 active:border-red-700'
             >
               <FaStop /> {/* Используем символ стрелки для сброса */}
             </button>
