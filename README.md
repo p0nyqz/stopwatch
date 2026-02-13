@@ -1,51 +1,61 @@
-# React + TypeScript + Vite
+# Набросошная / GestureFlow
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Таймер для художников — помогает практиковать наброски и рисование фигур с таймированными позами.
 
-Currently, two official plugins are available:
+## Две версии интерфейса
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Classic** — оригинальный интерфейс с пресетами в формате `NxM` (например, 8x30s), drag-and-drop, плейлистом Apple Music
+- **GestureFlow** — новый дизайн с таймлайном сессии, вводом секунд через запятую, музыкальным плеером (заглушка)
 
-## Expanding the ESLint configuration
+Переключение между версиями — кнопки в углу экрана.
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+## Стек
 
-- Configure the top-level `parserOptions` property like this:
+- React 18 + TypeScript
+- Vite 5
+- Tailwind CSS 4 + shadcn/ui (new-york)
+- Framer Motion (`motion/react`)
+- react-dnd (Classic)
+- Web Speech API (двуязычные голосовые объявления)
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+## Запуск
+
+```bash
+npm install
+npm run dev
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+## Скрипты
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+| Команда         | Описание                       |
+|-----------------|--------------------------------|
+| `npm run dev`   | Dev-сервер с HMR               |
+| `npm run build` | TypeScript проверка + сборка   |
+| `npm run lint`  | ESLint                         |
+| `npm run preview` | Превью production-сборки     |
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
+## Добавление shadcn компонентов
+
+```bash
+npx shadcn@latest add <component-name>
 ```
-# stopwatch
+
+## Структура
+
+```
+src/
+  App.tsx                        # Переключатель страниц
+  index.css                      # Tailwind v4 тема + дизайн-токены
+  lib/utils.ts                   # cn() утилита (shadcn)
+  components/
+    ui/                          # shadcn компоненты
+    Stopwatch/                   # Classic — таймер
+    Playlist/                    # Classic — Apple Music плейлист
+    AudioManager/                # Хук для звуков
+    TimerInput/                  # Classic — ввод таймеров
+    TimerList/                   # Classic — список таймеров
+  pages/
+    GestureFlow/index.tsx        # GestureFlow — полная страница
+  utils/utils.tsx                # Общие утилиты (parseTimers, speak, formatTime)
+  assets/sounds/                 # Звуки (колокольчик, тикание и пр.)
+```

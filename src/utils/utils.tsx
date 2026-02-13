@@ -74,3 +74,18 @@ export const speak = (text: string, lang: string = 'ru-RU', voiceName: string = 
 //   sound.load();
 //   return sound;
 // };
+
+export const parseSecondsInput = (input: string): number[] => {
+  return input
+    .split(',')
+    .map(s => s.trim())
+    .filter(s => s !== '')
+    .map(Number)
+    .filter(n => !isNaN(n) && n > 0);
+};
+
+export const formatSecondsAsMSS = (totalSeconds: number): string => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+};
