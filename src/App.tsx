@@ -1,21 +1,40 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import nabrososhnayaLogo from './assets/nabrososhnaja-logo.png';
 import './index.css';
 import { Stopwatch }  from './components/Stopwatch'
 import { Playlist } from './components/Playlist';
 import { GestureFlowPage } from './pages/GestureFlow';
+import { cn } from '@/lib/utils';
 
 type Page = 'classic' | 'gestureflow';
 
 function App() {
   const [page, setPage] = useState<Page>('gestureflow');
+  const [classicTheme, setClassicTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", classicTheme === "dark");
+  }, [classicTheme]);
 
   if (page === 'gestureflow') {
-    return <GestureFlowPage onSwitchToClassic={() => setPage('classic')} />;
+    return (
+      <GestureFlowPage
+        onSwitchToClassic={() => setPage('classic')}
+        classicTheme={classicTheme}
+        onChangeClassicTheme={setClassicTheme}
+      />
+    );
   }
 
   return (
-    <div className="classic-page">
+    <div
+      className={cn(
+        "classic-page min-h-screen transition-colors",
+        classicTheme === "dark"
+          ? "classic-dark bg-zinc-950 text-zinc-100"
+          : "classic-light bg-zinc-50 text-zinc-900"
+      )}
+    >
       <div className="flex pt-10 top-0">
         <div>
           <img
